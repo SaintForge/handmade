@@ -26,6 +26,8 @@ typedef uint64_t uint64;
 typedef float real32;
 typedef double real64;
 
+#include "handmade.cpp"
+
 struct win32_offscreen_buffer 
 {
     BITMAPINFO Info;
@@ -66,6 +68,12 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter)
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
+
+void *
+PlatformLoadFile(char* FileName)
+{
+     return(0);
+}
 
 internal void
 Wind32LoadXInput(void)
@@ -190,32 +198,6 @@ Win32GetWindowDimension(HWND Window)
     return(Result);
 }
 
-
-
-internal void
-RenderWeirdGradient(win32_offscreen_buffer  *Buffer, int XOffset, int YOffset)
-{
-    uint8 *Row = (uint8*)Buffer->Memory;
-    for(int Y = 0;
-        Y < Buffer->Height;
-        ++Y)
-    {
-        uint32 *Pixel = (uint32*)Row;
-        for(int X = 0;
-            X < Buffer->Width;
-            ++X)
-        {
-            uint8 Blue = (X + XOffset);
-            uint8 Green = (Y + YOffset);
-
-            *Pixel++ = ((Green << 8) | Blue);
-        }
-		
-		
-        Row += Buffer->Pitch;
-    } 
-}
-
 internal void
 Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 {
@@ -252,6 +234,8 @@ Win32DisplayBufferInWindow(win32_offscreen_buffer *Buffer,
                     DIB_RGB_COLORS, SRCCOPY);
 
 }
+
+
 internal LRESULT CALLBACK
 Win32WindowProc(HWND    Window,
 		UINT    Message,
@@ -550,8 +534,13 @@ int CALLBACK WinMain(
 		    }
 		}
 
-		
-                RenderWeirdGradient(&GlobalBackuffer, XOffset, YOffset);
+		game_offscreen_buffer Buffer = {};
+		Buffer.Memory = GlobalBackuffer.Memory;
+		Buffer.Width = GlobalBackuffer.Width;
+		Buffer.Height = GlobalBackuffer.Height;
+		Buffer.Pitch = GlobalBackuffer.Pitch;
+		GameUpdateAndRender(&Buffer, XOffset, YOffset);
+
 		XOffset++;
 
 		// NOTE: DirectSound output test
@@ -601,9 +590,9 @@ int CALLBACK WinMain(
 		int32 FPS = PerCounterFrequency / CounterElapsed;
 		int32 MCPF = (int32)CyclesElapsed / (1000 * 1000);
 
-		char Buffer[256];
-		wsprintf(Buffer, "%dms/f, %df/s %dmc/f\n", MSPerFrame, FPS, MCPF);
-		OutputDebugStringA(Buffer);
+		char BufferTime[256];
+		wsprintf(BufferTime, "%dms/f, %df/s %dmc/f\n", MSPerFrame, FPS, MCPF);
+		OutputDebugStringA(BufferTime);
 
 		LastCounter = EndCounter;
 		LastCycleCount = EndCycleCount;
